@@ -1,0 +1,49 @@
+"use client";
+
+import { useState } from "react";
+import Sidebar from "./Sidebar";
+import ChatWindow from "./ChatWindow";
+import { useConversations } from "./contexts/ConversationContext";
+
+export default function Home() {
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const { isLoading } = useConversations();
+
+    if (isLoading) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center bg-background">
+                <div className="flex flex-col items-center space-y-4">
+                    <div className="relative">
+                        <div className="w-10 h-10 border-3 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                    </div>
+                    <div className="text-center space-y-1">
+                        <p className="text-sm font-medium text-foreground">
+                            Loading conversations...
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            Setting up your AI assistant
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex h-screen bg-background text-foreground">
+            {/* Sidebar */}
+            <Sidebar
+                isOpen={isSidebarOpen}
+                onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+            />
+
+            {/* Main Chat Window */}
+            <div className="flex-1 flex flex-col min-w-0">
+                <ChatWindow
+                    isSidebarOpen={isSidebarOpen}
+                    onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                />
+            </div>
+        </div>
+    );
+}
