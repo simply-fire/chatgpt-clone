@@ -13,6 +13,7 @@ import {
     ThumbsUp,
     ThumbsDown,
     RotateCcw,
+    PlusCircle,
 } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import ReactMarkdown from "react-markdown";
@@ -39,8 +40,11 @@ export default function ChatWindow({
 }: ChatWindowProps) {
     console.log("🔍 [ChatWindow] Component render started");
 
-    const { currentConversation, updateCurrentConversation } =
-        useConversations();
+    const {
+        currentConversation,
+        updateCurrentConversation,
+        createConversation,
+    } = useConversations();
     const isUpdatingRef = useRef(false);
     const conversationInitialized = useRef<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -385,7 +389,7 @@ export default function ChatWindow({
         <section className="flex-1 flex flex-col h-full bg-gradient-to-br from-gray-50 to-white dark:from-neutral-950 dark:to-neutral-900">
             {/* Header with enhanced styling */}
             <header className="flex items-center justify-between p-6 border-b border-gray-200/50 dark:border-neutral-800/50 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm">
-                <div className="flex items-center">
+                <div className="flex items-center gap-2">
                     <button
                         onClick={onToggleSidebar}
                         aria-label="Toggle sidebar"
@@ -393,7 +397,20 @@ export default function ChatWindow({
                     >
                         <Menu size={20} />
                     </button>
-                    <h1 className="ml-4 font-bold text-xl bg-gradient-to-r from-gray-800 to-gray-600 dark:from-gray-200 dark:to-gray-400 bg-clip-text text-transparent">
+
+                    {/* New Chat button - only visible when sidebar is closed */}
+                    {!isSidebarOpen && (
+                        <button
+                            onClick={() => createConversation()}
+                            aria-label="Start new chat"
+                            className="p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-neutral-800 transition-all duration-200 text-gray-700 dark:text-gray-300 hover:scale-105 animate-fade-in"
+                            title="Start new chat"
+                        >
+                            <PlusCircle size={20} />
+                        </button>
+                    )}
+
+                    <h1 className="ml-2 font-bold text-xl bg-gradient-to-r from-gray-800 to-gray-600 dark:from-gray-200 dark:to-gray-400 bg-clip-text text-transparent">
                         {currentConversation?.title || "New Chat"}
                     </h1>
                 </div>
