@@ -37,11 +37,19 @@ export default function ChatWindow({
     isSidebarOpen,
     onToggleSidebar,
 }: ChatWindowProps) {
+    console.log("🔍 [ChatWindow] Component render started");
+
     const { currentConversation, updateCurrentConversation } =
         useConversations();
     const isUpdatingRef = useRef(false);
     const conversationInitialized = useRef<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    console.log("🔍 [ChatWindow] Current conversation:", {
+        id: currentConversation?.id,
+        messageCount: currentConversation?.messages?.length || 0,
+        updateCurrentConversation: typeof updateCurrentConversation,
+    });
 
     // File upload integration
     const currentModel = "gpt-4o";
@@ -76,11 +84,24 @@ export default function ChatWindow({
         api: "/api/chat",
         keepLastMessageOnError: true,
         onResponse: (response) => {
-            console.log("🤖 Chat API Response received:", response.status);
+            console.log("🔍 [ChatWindow] useChat onResponse:", response.status);
         },
         onFinish: (message) => {
-            console.log("✅ Chat finished, updating conversation");
+            console.log("🔍 [ChatWindow] useChat onFinish:", {
+                messageLength: message.content.length,
+                messagesCount: messages.length,
+            });
+            // Note: Conversation saving is now handled by useEffect
         },
+        // Prevent automatic state mutations that cause loops
+        initialMessages: [],
+    });
+
+    console.log("🔍 [ChatWindow] useChat state:", {
+        messagesCount: messages.length,
+        isLoading,
+        status,
+        inputLength: input.length,
     });
 
     // Memory integration
@@ -91,6 +112,68 @@ export default function ChatWindow({
         null
     );
     const [editContent, setEditContent] = useState<string>("");
+
+    // State for tracking feedback on responses
+    const [feedbackState, setFeedbackState] = useState<{
+        [messageId: string]: "thumbsUp" | "thumbsDown" | null;
+    }>({});
+
+    // Handle response feedback (thumbs up/down)
+    const handleResponseFeedback = (
+        messageId: string,
+        feedback: "thumbsUp" | "thumbsDown"
+    ) => {
+        setFeedbackState((prev) => ({
+            ...prev,
+            [messageId]: prev[messageId] === feedback ? null : feedback,
+        }));
+
+        // You could extend this to send feedback to an analytics service
+        console.log(`Feedback for message ${messageId}:`, feedback);
+    };
+
+    // Handle regenerate response
+    const handleRegenerateResponse = useCallback(() => {
+        console.log("🔄 Regenerating response...");
+
+        // Find the last user message to regenerate from
+        const lastUserMessageIndex = messages.findLastIndex(
+            (msg) => msg.role === "user"
+        );
+        if (lastUserMessageIndex === -1) return;
+
+        // Remove all assistant messages after the last user message
+        const messagesToKeep = messages.slice(0, lastUserMessageIndex + 1);
+        console.log("✂️ Keeping", messagesToKeep.length, "messages");
+        setMessages(messagesToKeep);
+
+        // Re-submit the last user message
+        const lastUserMessage = messages[lastUserMessageIndex];
+        if (lastUserMessage && lastUserMessage.content) {
+            setTimeout(() => {
+                console.log(
+                    "🚀 Re-submitting:",
+                    lastUserMessage.content.substring(0, 50) + "..."
+                );
+                // Use a simple synthetic event
+                const event = { preventDefault: () => {} } as FormEvent;
+
+                // Temporarily set input to trigger submission
+                handleInputChange({
+                    target: { value: lastUserMessage.content },
+                } as any);
+
+                // Submit after input is set
+                setTimeout(() => {
+                    originalHandleSubmit(event);
+                    // Clear input after submission
+                    setTimeout(() => {
+                        handleInputChange({ target: { value: "" } } as any);
+                    }, 100);
+                }, 50);
+            }, 100);
+        }
+    }, [messages, setMessages, originalHandleSubmit, handleInputChange]);
 
     const handleEditStart = (messageId: string, content: string) => {
         setEditingMessageId(messageId);
@@ -186,7 +269,6 @@ export default function ChatWindow({
             originalHandleSubmit,
             clearAll,
             clearErrors,
-            status,
         ]
     );
 
@@ -204,30 +286,100 @@ export default function ChatWindow({
             currentConversation &&
             conversationInitialized.current !== currentConversation.id
         ) {
+            console.log("🔄 Loading conversation:", currentConversation.id);
             isUpdatingRef.current = true;
             setMessages(currentConversation.messages);
             conversationInitialized.current = currentConversation.id;
+            // Reset the completed message count when loading a new conversation
+            lastSavedMessageCount.current = currentConversation.messages.length;
             setTimeout(() => {
                 isUpdatingRef.current = false;
             }, 100);
         }
     }, [currentConversation?.id, setMessages]);
 
-    // Update conversation when messages change (debounced and protected)
-    useEffect(() => {
-        if (
-            messages.length > 0 &&
-            currentConversation &&
-            !isUpdatingRef.current &&
-            conversationInitialized.current === currentConversation.id
-        ) {
-            const timeoutId = setTimeout(() => {
-                updateCurrentConversation(messages);
-            }, 500);
+    // Track message saving with refs to avoid infinite loops
+    const lastSavedMessageCount = useRef(0);
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const isSavingRef = useRef(false);
 
-            return () => clearTimeout(timeoutId);
+    // Save messages when they change (but not during loading/streaming)
+    useEffect(() => {
+        // Clear any existing timeout
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+            saveTimeoutRef.current = null;
         }
-    }, [messages, currentConversation?.id, updateCurrentConversation]);
+
+        // Don't save if:
+        // - No current conversation
+        // - Still initializing conversation
+        // - No messages
+        // - Currently loading/streaming
+        // - Already saving
+        // - Message count hasn't changed
+        if (
+            !currentConversation ||
+            conversationInitialized.current !== currentConversation.id ||
+            messages.length === 0 ||
+            isLoading ||
+            isSavingRef.current ||
+            messages.length === lastSavedMessageCount.current
+        ) {
+            return;
+        }
+
+        console.log("💾 [ChatWindow] Messages changed, scheduling save...", {
+            messageCount: messages.length,
+            lastSaved: lastSavedMessageCount.current,
+            isLoading,
+            conversationId: currentConversation.id,
+        });
+
+        // Use a timeout to batch rapid message changes and ensure streaming is complete
+        saveTimeoutRef.current = setTimeout(() => {
+            // Double-check conditions before saving
+            if (
+                currentConversation &&
+                conversationInitialized.current === currentConversation.id &&
+                !isLoading &&
+                !isSavingRef.current &&
+                messages.length > lastSavedMessageCount.current
+            ) {
+                console.log("💾 [ChatWindow] Saving messages to conversation");
+                isSavingRef.current = true;
+                lastSavedMessageCount.current = messages.length;
+
+                try {
+                    updateCurrentConversation(messages);
+                } catch (error) {
+                    console.error(
+                        "❌ [ChatWindow] Error saving conversation:",
+                        error
+                    );
+                } finally {
+                    // Reset saving flag after a short delay
+                    setTimeout(() => {
+                        isSavingRef.current = false;
+                    }, 500);
+                }
+            }
+            saveTimeoutRef.current = null;
+        }, 1000); // 1 second delay to ensure streaming is complete
+
+        // Cleanup function
+        return () => {
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+                saveTimeoutRef.current = null;
+            }
+        };
+    }, [
+        messages.length,
+        isLoading,
+        currentConversation?.id,
+        updateCurrentConversation,
+    ]);
 
     return (
         <section className="flex-1 flex flex-col h-full bg-gradient-to-br from-gray-50 to-white dark:from-neutral-950 dark:to-neutral-900">
@@ -401,10 +553,7 @@ export default function ChatWindow({
                                                                     }
                                                                     disabled={
                                                                         !editContent.trim() ||
-                                                                        status ===
-                                                                            "submitted" ||
-                                                                        status ===
-                                                                            "streaming"
+                                                                        isLoading
                                                                     }
                                                                     className="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900 transition text-blue-600 dark:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
                                                                     aria-label="Save edit"
@@ -427,27 +576,24 @@ export default function ChatWindow({
                                                             </p>
 
                                                             {/* Edit button for user messages */}
-                                                            {status !==
-                                                                "submitted" &&
-                                                                status !==
-                                                                    "streaming" && (
-                                                                    <button
-                                                                        onClick={() =>
-                                                                            handleEditStart(
-                                                                                message.id,
-                                                                                message.content
-                                                                            )
+                                                            {!isLoading && (
+                                                                <button
+                                                                    onClick={() =>
+                                                                        handleEditStart(
+                                                                            message.id,
+                                                                            message.content
+                                                                        )
+                                                                    }
+                                                                    className="absolute top-0 right-0 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-200 dark:hover:bg-gray-700"
+                                                                    aria-label="Edit message"
+                                                                >
+                                                                    <Edit
+                                                                        size={
+                                                                            14
                                                                         }
-                                                                        className="absolute top-0 right-0 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-200 dark:hover:bg-gray-700"
-                                                                        aria-label="Edit message"
-                                                                    >
-                                                                        <Edit
-                                                                            size={
-                                                                                14
-                                                                            }
-                                                                        />
-                                                                    </button>
-                                                                )}
+                                                                    />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     )
                                                 ) : (
@@ -490,43 +636,65 @@ export default function ChatWindow({
                                                 )}
                                             </div>
 
-                                            {/* Response actions */}
-                                            <div className="flex items-center gap-2 mt-3 pt-2 border-t border-gray-200 dark:border-gray-700 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button
-                                                    className="p-2 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/20 transition-all duration-200"
-                                                    title="Good response"
-                                                >
-                                                    <ThumbsUp
-                                                        size={16}
-                                                        className="text-green-600 dark:text-green-400"
-                                                    />
-                                                </button>
-                                                <button
-                                                    className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 transition-all duration-200"
-                                                    title="Bad response"
-                                                >
-                                                    <ThumbsDown
-                                                        size={16}
-                                                        className="text-red-600 dark:text-red-400"
-                                                    />
-                                                </button>
-                                                <button
-                                                    className="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-all duration-200"
-                                                    title="Regenerate response"
-                                                >
-                                                    <RotateCcw
-                                                        size={16}
-                                                        className="text-blue-600 dark:text-blue-400"
-                                                    />
-                                                </button>
-                                            </div>
+                                            {/* Response actions - only for assistant messages */}
+                                            {message.role === "assistant" && (
+                                                <div className="flex items-center gap-2 mt-3 pt-2 border-t border-gray-200 dark:border-gray-700 opacity-0 hover:opacity-100 transition-opacity">
+                                                    <button
+                                                        onClick={() =>
+                                                            handleResponseFeedback(
+                                                                message.id,
+                                                                "thumbsUp"
+                                                            )
+                                                        }
+                                                        className="p-2 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/20 transition-all duration-200"
+                                                        title="Good response"
+                                                    >
+                                                        <ThumbsUp
+                                                            size={16}
+                                                            className="text-green-600 dark:text-green-400"
+                                                        />
+                                                    </button>
+                                                    <button
+                                                        onClick={() =>
+                                                            handleResponseFeedback(
+                                                                message.id,
+                                                                "thumbsDown"
+                                                            )
+                                                        }
+                                                        className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 transition-all duration-200"
+                                                        title="Bad response"
+                                                    >
+                                                        <ThumbsDown
+                                                            size={16}
+                                                            className="text-red-600 dark:text-red-400"
+                                                        />
+                                                    </button>
+                                                    <button
+                                                        onClick={
+                                                            handleRegenerateResponse
+                                                        }
+                                                        className="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-all duration-200"
+                                                        title="Regenerate response"
+                                                        disabled={isLoading}
+                                                    >
+                                                        <RotateCcw
+                                                            size={16}
+                                                            className={`${
+                                                                isLoading
+                                                                    ? "text-gray-400 dark:text-gray-500"
+                                                                    : "text-blue-600 dark:text-blue-400"
+                                                            }`}
+                                                        />
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         ))}
 
-                        {(status === "submitted" || status === "streaming") && (
+                        {isLoading && (
                             <div className="border-b border-gray-100 dark:border-neutral-800/50 bg-white dark:bg-neutral-950">
                                 <div className="max-w-4xl mx-auto px-6 py-6">
                                     <div className="flex gap-4">
@@ -636,24 +804,19 @@ export default function ChatWindow({
                                             ? "Add a message (optional)..."
                                             : "Message ChatGPT..."
                                     }
-                                    disabled={
-                                        status === "submitted" ||
-                                        status === "streaming"
-                                    }
+                                    disabled={isLoading}
                                 />
 
                                 <button
                                     type="submit"
                                     disabled={
-                                        status === "submitted" ||
-                                        status === "streaming" ||
+                                        isLoading ||
                                         (!input.trim() && !hasFiles) ||
                                         isProcessing
                                     }
                                     className="mr-3 p-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-white shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none"
                                 >
-                                    {status === "submitted" ||
-                                    status === "streaming" ? (
+                                    {isLoading ? (
                                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                                     ) : (
                                         <Send size={20} />

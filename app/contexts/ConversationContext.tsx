@@ -39,10 +39,18 @@ interface ConversationContextType {
 const ConversationContext = createContext<ConversationContextType | null>(null);
 
 export function ConversationProvider({ children }: { children: ReactNode }) {
+    console.log("🔍 [ConversationProvider] Component render started");
+
     const [currentConversation, setCurrentConversation] =
         useState<Conversation | null>(null);
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    console.log("🔍 [ConversationProvider] State:", {
+        currentConversationId: currentConversation?.id,
+        conversationsCount: conversations.length,
+        isLoading,
+    });
 
     // Load conversations on mount
     useEffect(() => {
@@ -73,79 +81,102 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
     }, []);
 
     // Load existing conversation
-    const loadConversation = useCallback(
-        (id: string): void => {
-            const conversation = conversations.find((conv) => conv.id === id);
+    const loadConversation = useCallback((id: string): void => {
+        console.log("🔍 [ConversationContext] loadConversation called for", id);
+        setConversations((prevConversations) => {
+            const conversation = prevConversations.find(
+                (conv) => conv.id === id
+            );
             if (conversation) {
                 setCurrentConversation(conversation);
             }
-        },
-        [conversations]
-    );
+            return prevConversations; // Don't change conversations array
+        });
+    }, []);
 
     // Update current conversation with new messages
     const updateCurrentConversation = useCallback(
         (messages: Message[]): void => {
-            if (!currentConversation) return;
-
-            // Avoid unnecessary updates if messages are the same
-            if (currentConversation.messages.length === messages.length) {
-                let isIdentical = true;
-                for (let i = 0; i < messages.length; i++) {
-                    const existing = currentConversation.messages[i];
-                    const newMsg = messages[i];
-                    if (
-                        existing.id !== newMsg.id ||
-                        existing.content !== newMsg.content ||
-                        existing.role !== newMsg.role
-                    ) {
-                        isIdentical = false;
-                        break;
-                    }
-                }
-                if (isIdentical) return;
-            }
-
-            const updatedConversation = {
-                ...currentConversation,
-                messages,
-                updatedAt: new Date().toISOString(),
-            };
-
-            // Auto-generate title from first user message if still "New Chat"
-            if (
-                updatedConversation.title === "New Chat" &&
-                messages.length > 0
-            ) {
-                const firstUserMessage = messages.find(
-                    (msg) => msg.role === "user"
-                );
-                if (firstUserMessage) {
-                    updatedConversation.title = generateConversationTitle(
-                        firstUserMessage.content
-                    );
-                }
-            }
-
-            setCurrentConversation(updatedConversation);
-
-            // Update conversations list
-            setConversations((prev) =>
-                prev.map((conv) =>
-                    conv.id === updatedConversation.id
-                        ? updatedConversation
-                        : conv
-                )
+            console.log(
+                "🔍 [ConversationContext] updateCurrentConversation called with",
+                messages.length,
+                "messages"
             );
 
-            // Save to localStorage
-            saveConversation(updatedConversation);
+            // Use a function that gets the latest state
+            setCurrentConversation((prevConversation) => {
+                if (!prevConversation) {
+                    console.log(
+                        "🔍 [ConversationContext] No current conversation to update"
+                    );
+                    return prevConversation;
+                }
+
+                // Avoid unnecessary updates if messages are the same
+                if (prevConversation.messages.length === messages.length) {
+                    let isIdentical = true;
+                    for (let i = 0; i < messages.length; i++) {
+                        const existing = prevConversation.messages[i];
+                        const newMsg = messages[i];
+                        if (
+                            existing.id !== newMsg.id ||
+                            existing.content !== newMsg.content ||
+                            existing.role !== newMsg.role
+                        ) {
+                            isIdentical = false;
+                            break;
+                        }
+                    }
+                    if (isIdentical) {
+                        console.log(
+                            "🔍 [ConversationContext] Messages are identical, skipping update"
+                        );
+                        return prevConversation;
+                    }
+                }
+
+                const updatedConversation = {
+                    ...prevConversation,
+                    messages,
+                    updatedAt: new Date().toISOString(),
+                };
+
+                // Auto-generate title from first user message if still "New Chat"
+                if (
+                    updatedConversation.title === "New Chat" &&
+                    messages.length > 0
+                ) {
+                    const firstUserMessage = messages.find(
+                        (msg) => msg.role === "user"
+                    );
+                    if (firstUserMessage) {
+                        updatedConversation.title = generateConversationTitle(
+                            firstUserMessage.content
+                        );
+                    }
+                }
+
+                console.log(
+                    "🔍 [ConversationContext] Updating conversation",
+                    updatedConversation.id
+                );
+
+                // Update conversations list
+                setConversations((prev) =>
+                    prev.map((conv) =>
+                        conv.id === updatedConversation.id
+                            ? updatedConversation
+                            : conv
+                    )
+                );
+
+                // Save to localStorage
+                saveConversation(updatedConversation);
+
+                return updatedConversation;
+            });
         },
-        [
-            currentConversation?.id,
-            currentConversation?.title,
-            currentConversation?.messages,
-        ] // More specific dependencies
+        [] // No dependencies - use state setters with functions
     );
 
     // Delete conversation
