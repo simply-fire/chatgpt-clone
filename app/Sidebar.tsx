@@ -82,7 +82,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
     return (
         <>
-            {/* Mobile overlay */}
+            {/* Mobile overlay - only on small screens */}
             {isOpen && (
                 <div
                     className="fixed inset-0 bg-black/50 z-40 lg:hidden"
@@ -93,12 +93,11 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             {/* Sidebar */}
             <aside
                 className={`
-        ${isOpen ? "translate-x-0" : "-translate-x-full"}
+        ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         fixed lg:relative z-50 lg:z-auto
         w-64 h-full bg-gradient-to-b from-gray-50 to-gray-100 dark:from-neutral-900 dark:to-neutral-950
         border-r border-gray-200 dark:border-neutral-800 
         flex flex-col transition-transform duration-300 ease-in-out
-        lg:${isOpen ? "translate-x-0" : "-translate-x-full"}
         shadow-xl lg:shadow-none
       `}
             >

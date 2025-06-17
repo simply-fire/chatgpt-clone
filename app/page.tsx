@@ -31,14 +31,28 @@ export default function Home() {
 
     return (
         <div className="flex h-screen bg-background text-foreground">
-            {/* Sidebar */}
-            <Sidebar
-                isOpen={isSidebarOpen}
-                onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-            />
+            {/* Sidebar with smooth width transition */}
+            <div
+                className={`transition-all duration-300 ease-in-out ${
+                    isSidebarOpen ? "w-64" : "w-0"
+                } lg:block hidden overflow-hidden`}
+            >
+                <Sidebar
+                    isOpen={isSidebarOpen}
+                    onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+                />
+            </div>
 
-            {/* Main Chat Window */}
-            <div className="flex-1 flex flex-col min-w-0">
+            {/* Mobile Sidebar Overlay */}
+            <div className="lg:hidden">
+                <Sidebar
+                    isOpen={isSidebarOpen}
+                    onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+                />
+            </div>
+
+            {/* Main Chat Window - automatically expands when sidebar closes */}
+            <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out">
                 <ChatWindow
                     isSidebarOpen={isSidebarOpen}
                     onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
