@@ -95,28 +95,28 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 className={`
         ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         fixed lg:relative z-50 lg:z-auto
-        w-64 h-full bg-gradient-to-b from-gray-50 to-gray-100 dark:from-neutral-900 dark:to-neutral-950
-        border-r border-gray-200 dark:border-neutral-800 
+        w-64 h-full bg-[#181818]
+        border-r border-[#3a3a3a]
         flex flex-col transition-transform duration-300 ease-in-out
         shadow-xl lg:shadow-none
       `}
             >
-                {/* Header with gradient branding */}
-                <div className="p-6 border-b border-gray-200 dark:border-neutral-800 bg-gradient-to-r from-blue-600 to-purple-600">
+                {/* Header with minimal styling */}
+                <div className="p-6 border-b border-[#3a3a3a]">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-md">
-                                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-500 rounded-md flex items-center justify-center">
+                            <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-lg flex items-center justify-center">
+                                <div className="w-6 h-6 rounded-md flex items-center justify-center">
                                     <span className="text-white text-xs font-bold">
                                         AI
                                     </span>
                                 </div>
                             </div>
                             <div>
-                                <h2 className="text-white font-bold text-lg">
+                                <h2 className="text-[#f5f5f5] font-bold text-lg">
                                     ChatGPT
                                 </h2>
-                                <p className="text-blue-100 text-xs opacity-90">
+                                <p className="text-[#b4b4b4] text-xs">
                                     AI Assistant
                                 </p>
                             </div>
@@ -124,16 +124,16 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                         <button
                             onClick={onToggle}
                             aria-label="Close sidebar"
-                            className="p-2 rounded-lg hover:bg-white/10 transition text-white"
+                            className="p-2 rounded-lg hover:bg-white/10 transition text-[#e5e5e5] hover:text-white"
                         >
                             <X size={20} />
                         </button>
                     </div>
 
-                    {/* New Chat Button - Enhanced */}
+                    {/* New Chat Button - Minimal */}
                     <button
                         onClick={handleNewChat}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white text-gray-800 hover:bg-gray-50 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[#2a2a2a] text-[#f5f5f5] hover:bg-[#3a3a3a] transition-all duration-200"
                     >
                         <PlusCircle size={18} />
                         <span className="font-medium">New Chat</span>
@@ -141,11 +141,11 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 </div>
                 {/* Fixed Options */}
                 <nav className="p-4 space-y-2">
-                    <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-neutral-800/50 transition text-left text-gray-700 dark:text-gray-300">
+                    <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#2a2a2a] transition text-left text-[#e5e5e5]">
                         <Search size={18} />
                         <span>Search Chat</span>
                     </button>
-                    <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-200/50 dark:hover:bg-neutral-800/50 transition text-left text-gray-700 dark:text-gray-300">
+                    <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#2a2a2a] transition text-left text-[#e5e5e5]">
                         <BookOpen size={18} />
                         <span>Library</span>
                     </button>
@@ -153,12 +153,12 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
                 {/* Chat History */}
                 <div className="flex-1 p-4 pt-0 overflow-y-auto">
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-3 font-semibold uppercase tracking-wider">
+                    <div className="text-xs text-[#a0a0a0] mb-3 font-semibold uppercase tracking-wider">
                         Recent Chats
                     </div>
 
                     {conversations.length === 0 ? (
-                        <div className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">
+                        <div className="text-sm text-[#a0a0a0] text-center py-8">
                             <MessageSquare
                                 size={24}
                                 className="mx-auto mb-2 opacity-50"
@@ -170,11 +170,11 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                             {conversations.map((conversation) => (
                                 <div
                                     key={conversation.id}
-                                    className={`group relative rounded-xl transition-all duration-200 hover:shadow-md ${
+                                    className={`group relative rounded-xl transition-all duration-200 ${
                                         currentConversation?.id ===
                                         conversation.id
-                                            ? "bg-white dark:bg-neutral-800 shadow-md ring-2 ring-blue-500/20"
-                                            : "hover:bg-white dark:hover:bg-neutral-800/50"
+                                            ? "bg-[#2a2a2a]"
+                                            : "hover:bg-[#2a2a2a]/50"
                                     }`}
                                 >
                                     {editingId === conversation.id ? (
@@ -192,7 +192,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                                                         handleEditCancel();
                                                 }}
                                                 onBlur={handleEditSave}
-                                                className="w-full px-2 py-1 text-sm bg-white dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                className="w-full px-2 py-1 text-sm bg-[#2a2a2a] text-[#e5e5e5] border border-[#525252] rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                 autoFocus
                                             />
                                         </div>
@@ -213,10 +213,10 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                                                     />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate mb-1">
+                                                    <div className="text-sm font-medium text-[#f5f5f5] truncate mb-1">
                                                         {conversation.title}
                                                     </div>
-                                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                    <div className="text-xs text-[#a0a0a0]">
                                                         {formatDate(
                                                             conversation.updatedAt
                                                         )}
@@ -237,12 +237,12 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                                                         conversation.title
                                                     );
                                                 }}
-                                                className="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-all duration-200 transform hover:scale-105"
+                                                className="p-2 rounded-lg hover:bg-[#3a3a3a] transition-all duration-200"
                                                 title="Rename conversation"
                                             >
                                                 <Edit2
                                                     size={14}
-                                                    className="text-blue-600 dark:text-blue-400"
+                                                    className="text-[#a0a0a0] hover:text-[#e5e5e5]"
                                                 />
                                             </button>
                                             <button
@@ -258,12 +258,12 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                                                         );
                                                     }
                                                 }}
-                                                className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 transition-all duration-200 transform hover:scale-105"
+                                                className="p-2 rounded-lg hover:bg-[#3a3a3a] transition-all duration-200"
                                                 title="Delete conversation"
                                             >
                                                 <Trash2
                                                     size={14}
-                                                    className="text-red-500 dark:text-red-400"
+                                                    className="text-[#a0a0a0] hover:text-red-400"
                                                 />
                                             </button>
                                         </div>
