@@ -478,231 +478,241 @@ export default function ChatWindow({
                                 style={{ animationDelay: `${index * 0.1}s` }}
                             >
                                 <div className="max-w-4xl mx-auto px-6 py-6">
-                                    <div className="flex gap-4">
-                                        {/* Avatar */}
-                                        <div className="flex-shrink-0">
-                                            {message.role === "assistant" ? (
-                                                <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center">
+                                    {message.role === "user" ? (
+                                        /* User message - bubble style, right-aligned */
+                                        <div className="flex justify-end">
+                                            <div className="max-w-[70%] flex flex-col items-end gap-2">
+                                                <div className="bg-[#2a2a2a] border border-[#3a3a3a] rounded-2xl px-4 py-3">
+                                                    <div className="text-[#e5e5e5]">
+                                                        {editingMessageId ===
+                                                        message.id ? (
+                                                            /* Edit mode for user messages */
+                                                            <div className="space-y-2">
+                                                                <textarea
+                                                                    value={
+                                                                        editContent
+                                                                    }
+                                                                    onChange={(
+                                                                        e
+                                                                    ) =>
+                                                                        setEditContent(
+                                                                            e
+                                                                                .target
+                                                                                .value
+                                                                        )
+                                                                    }
+                                                                    className="w-full bg-[#1a1a1a] text-[#e5e5e5] placeholder-[#a0a0a0] border border-[#525252] rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                    placeholder="Edit your message..."
+                                                                    rows={Math.max(
+                                                                        2,
+                                                                        editContent.split(
+                                                                            "\n"
+                                                                        ).length
+                                                                    )}
+                                                                    autoFocus
+                                                                />
+                                                                <div className="flex gap-2 justify-end">
+                                                                    <button
+                                                                        onClick={
+                                                                            handleEditCancel
+                                                                        }
+                                                                        className="p-2 rounded-lg hover:bg-[#3a3a3a] transition text-[#a0a0a0] hover:text-[#e5e5e5]"
+                                                                        aria-label="Cancel edit"
+                                                                    >
+                                                                        <X
+                                                                            size={
+                                                                                14
+                                                                            }
+                                                                        />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() =>
+                                                                            handleEditSave(
+                                                                                message.id
+                                                                            )
+                                                                        }
+                                                                        disabled={
+                                                                            !editContent.trim() ||
+                                                                            isLoading
+                                                                        }
+                                                                        className="p-2 rounded-lg hover:bg-blue-900/20 transition text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                        aria-label="Save edit"
+                                                                    >
+                                                                        <Check
+                                                                            size={
+                                                                                14
+                                                                            }
+                                                                        />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            /* User message content */
+                                                            <div className="relative group">
+                                                                <p className="whitespace-pre-wrap">
+                                                                    {
+                                                                        message.content
+                                                                    }
+                                                                </p>
+                                                                {/* Edit button for user messages */}
+                                                                {!isLoading && (
+                                                                    <button
+                                                                        onClick={() =>
+                                                                            handleEditStart(
+                                                                                message.id,
+                                                                                message.content
+                                                                            )
+                                                                        }
+                                                                        className="absolute -top-1 -right-1 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#3a3a3a] text-[#a0a0a0] hover:text-[#e5e5e5]"
+                                                                        aria-label="Edit message"
+                                                                    >
+                                                                        <Edit
+                                                                            size={
+                                                                                14
+                                                                            }
+                                                                        />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs text-[#a0a0a0]">
+                                                        {new Date().toLocaleTimeString(
+                                                            [],
+                                                            {
+                                                                hour: "2-digit",
+                                                                minute: "2-digit",
+                                                            }
+                                                        )}
+                                                    </span>
+                                                    <div className="w-6 h-6 bg-[#4a4a4a] rounded-full flex items-center justify-center">
+                                                        <User
+                                                            size={12}
+                                                            className="text-[#e5e5e5]"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        /* Assistant message - traditional layout, left-aligned */
+                                        <div className="flex gap-4">
+                                            {/* Avatar */}
+                                            <div className="flex-shrink-0">
+                                                <div className="w-8 h-8 bg-[#4a4a4a] rounded-full flex items-center justify-center">
                                                     <Bot
                                                         size={16}
-                                                        className="text-white"
+                                                        className="text-[#e5e5e5]"
                                                     />
                                                 </div>
-                                            ) : (
-                                                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                                                    <User
-                                                        size={16}
-                                                        className="text-white"
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Message Content */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <span className="text-sm font-semibold text-[#f5f5f5]">
-                                                    {message.role ===
-                                                    "assistant"
-                                                        ? "Assistant"
-                                                        : "You"}
-                                                </span>
-                                                <span className="text-xs text-[#a0a0a0]">
-                                                    {new Date().toLocaleTimeString(
-                                                        [],
-                                                        {
-                                                            hour: "2-digit",
-                                                            minute: "2-digit",
-                                                        }
-                                                    )}
-                                                </span>
                                             </div>
 
-                                            <div className="text-[#e5e5e5]">
-                                                {message.role === "user" ? (
-                                                    editingMessageId ===
-                                                    message.id ? (
-                                                        /* Edit mode */
-                                                        <div className="space-y-2">
-                                                            <textarea
-                                                                value={
-                                                                    editContent
-                                                                }
-                                                                onChange={(e) =>
-                                                                    setEditContent(
-                                                                        e.target
-                                                                            .value
-                                                                    )
-                                                                }
-                                                                className="w-full bg-[#2a2a2a] text-[#e5e5e5] placeholder-[#a0a0a0] border border-[#525252] rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                                placeholder="Edit your message..."
-                                                                rows={Math.max(
-                                                                    2,
-                                                                    editContent.split(
-                                                                        "\n"
-                                                                    ).length
-                                                                )}
-                                                                autoFocus
-                                                            />
-                                                            <div className="flex gap-2 justify-end">
-                                                                <button
-                                                                    onClick={
-                                                                        handleEditCancel
-                                                                    }
-                                                                    className="p-2 rounded-lg hover:bg-[#3a3a3a] transition text-[#a0a0a0] hover:text-[#e5e5e5]"
-                                                                    aria-label="Cancel edit"
-                                                                >
-                                                                    <X
-                                                                        size={
-                                                                            14
-                                                                        }
-                                                                    />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() =>
-                                                                        handleEditSave(
-                                                                            message.id
-                                                                        )
-                                                                    }
-                                                                    disabled={
-                                                                        !editContent.trim() ||
-                                                                        isLoading
-                                                                    }
-                                                                    className="p-2 rounded-lg hover:bg-blue-900/20 transition text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                                    aria-label="Save edit"
-                                                                >
-                                                                    <Check
-                                                                        size={
-                                                                            14
-                                                                        }
-                                                                    />
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        /* User message content */
-                                                        <div className="relative group">
-                                                            <p className="whitespace-pre-wrap mb-3">
-                                                                {
-                                                                    message.content
-                                                                }
-                                                            </p>
+                                            {/* Message Content */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="text-sm font-semibold text-[#f5f5f5]">
+                                                        Assistant
+                                                    </span>
+                                                    <span className="text-xs text-[#a0a0a0]">
+                                                        {new Date().toLocaleTimeString(
+                                                            [],
+                                                            {
+                                                                hour: "2-digit",
+                                                                minute: "2-digit",
+                                                            }
+                                                        )}
+                                                    </span>
+                                                </div>
 
-                                                            {/* Edit button for user messages */}
-                                                            {!isLoading && (
-                                                                <button
-                                                                    onClick={() =>
-                                                                        handleEditStart(
-                                                                            message.id,
-                                                                            message.content
-                                                                        )
-                                                                    }
-                                                                    className="absolute top-0 right-0 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#3a3a3a] text-[#a0a0a0] hover:text-[#e5e5e5]"
-                                                                    aria-label="Edit message"
-                                                                >
-                                                                    <Edit
-                                                                        size={
-                                                                            14
-                                                                        }
-                                                                    />
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    )
-                                                ) : (
-                                                    /* Assistant message content */
-                                                    <div className="prose prose-sm prose-invert max-w-none mb-3">
-                                                        <ReactMarkdown
-                                                            components={{
-                                                                p: ({
-                                                                    children,
-                                                                }) => (
-                                                                    <p className="mb-2 last:mb-0 text-[#e5e5e5]">
-                                                                        {
-                                                                            children
-                                                                        }
-                                                                    </p>
-                                                                ),
-                                                                code: ({
-                                                                    children,
-                                                                }) => (
-                                                                    <code className="bg-[#3a3a3a] text-[#f5f5f5] px-1 py-0.5 rounded text-sm">
-                                                                        {
-                                                                            children
-                                                                        }
-                                                                    </code>
-                                                                ),
-                                                                pre: ({
-                                                                    children,
-                                                                }) => (
-                                                                    <pre className="bg-[#2a2a2a] text-[#e5e5e5] p-3 rounded-lg overflow-x-auto">
-                                                                        {
-                                                                            children
-                                                                        }
-                                                                    </pre>
-                                                                ),
-                                                            }}
+                                                {/* Assistant message content */}
+                                                <div className="prose prose-sm prose-invert max-w-none mb-3">
+                                                    <ReactMarkdown
+                                                        components={{
+                                                            p: ({
+                                                                children,
+                                                            }) => (
+                                                                <p className="mb-2 last:mb-0 text-[#e5e5e5]">
+                                                                    {children}
+                                                                </p>
+                                                            ),
+                                                            code: ({
+                                                                children,
+                                                            }) => (
+                                                                <code className="bg-[#3a3a3a] text-[#f5f5f5] px-1 py-0.5 rounded text-sm">
+                                                                    {children}
+                                                                </code>
+                                                            ),
+                                                            pre: ({
+                                                                children,
+                                                            }) => (
+                                                                <pre className="bg-[#2a2a2a] text-[#e5e5e5] p-3 rounded-lg overflow-x-auto">
+                                                                    {children}
+                                                                </pre>
+                                                            ),
+                                                        }}
+                                                    >
+                                                        {message.content}
+                                                    </ReactMarkdown>
+                                                </div>
+
+                                                {/* Response actions - only for assistant messages */}
+                                                {message.role ===
+                                                    "assistant" && (
+                                                    <div className="flex items-center gap-2 mt-3 pt-2 border-t border-[#3a3a3a] opacity-0 hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() =>
+                                                                handleResponseFeedback(
+                                                                    message.id,
+                                                                    "thumbsUp"
+                                                                )
+                                                            }
+                                                            className="p-2 rounded-lg hover:bg-[#3a3a3a] transition-all duration-200"
+                                                            title="Good response"
                                                         >
-                                                            {message.content}
-                                                        </ReactMarkdown>
+                                                            <ThumbsUp
+                                                                size={16}
+                                                                className="text-[#a0a0a0] hover:text-[#e5e5e5]"
+                                                            />
+                                                        </button>
+                                                        <button
+                                                            onClick={() =>
+                                                                handleResponseFeedback(
+                                                                    message.id,
+                                                                    "thumbsDown"
+                                                                )
+                                                            }
+                                                            className="p-2 rounded-lg hover:bg-[#3a3a3a] transition-all duration-200"
+                                                            title="Bad response"
+                                                        >
+                                                            <ThumbsDown
+                                                                size={16}
+                                                                className="text-[#a0a0a0] hover:text-[#e5e5e5]"
+                                                            />
+                                                        </button>
+                                                        <button
+                                                            onClick={
+                                                                handleRegenerateResponse
+                                                            }
+                                                            className="p-2 rounded-lg hover:bg-[#3a3a3a] transition-all duration-200"
+                                                            title="Regenerate response"
+                                                            disabled={isLoading}
+                                                        >
+                                                            <RotateCcw
+                                                                size={16}
+                                                                className={`${
+                                                                    isLoading
+                                                                        ? "animate-spin text-blue-400"
+                                                                        : "text-[#a0a0a0] hover:text-[#e5e5e5]"
+                                                                }`}
+                                                            />
+                                                        </button>
                                                     </div>
                                                 )}
                                             </div>
-
-                                            {/* Response actions - only for assistant messages */}
-                                            {message.role === "assistant" && (
-                                                <div className="flex items-center gap-2 mt-3 pt-2 border-t border-[#3a3a3a] opacity-0 hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() =>
-                                                            handleResponseFeedback(
-                                                                message.id,
-                                                                "thumbsUp"
-                                                            )
-                                                        }
-                                                        className="p-2 rounded-lg hover:bg-[#3a3a3a] transition-all duration-200"
-                                                        title="Good response"
-                                                    >
-                                                        <ThumbsUp
-                                                            size={16}
-                                                            className="text-[#a0a0a0] hover:text-[#e5e5e5]"
-                                                        />
-                                                    </button>
-                                                    <button
-                                                        onClick={() =>
-                                                            handleResponseFeedback(
-                                                                message.id,
-                                                                "thumbsDown"
-                                                            )
-                                                        }
-                                                        className="p-2 rounded-lg hover:bg-[#3a3a3a] transition-all duration-200"
-                                                        title="Bad response"
-                                                    >
-                                                        <ThumbsDown
-                                                            size={16}
-                                                            className="text-[#a0a0a0] hover:text-[#e5e5e5]"
-                                                        />
-                                                    </button>
-                                                    <button
-                                                        onClick={
-                                                            handleRegenerateResponse
-                                                        }
-                                                        className="p-2 rounded-lg hover:bg-[#3a3a3a] transition-all duration-200"
-                                                        title="Regenerate response"
-                                                        disabled={isLoading}
-                                                    >
-                                                        <RotateCcw
-                                                            size={16}
-                                                            className={`${
-                                                                isLoading
-                                                                    ? "text-[#6a6a6a]"
-                                                                    : "text-[#a0a0a0] hover:text-[#e5e5e5]"
-                                                            }`}
-                                                        />
-                                                    </button>
-                                                </div>
-                                            )}
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -711,10 +721,10 @@ export default function ChatWindow({
                             <div className="border-b border-[#3a3a3a] bg-transparent">
                                 <div className="max-w-4xl mx-auto px-6 py-6">
                                     <div className="flex gap-4">
-                                        <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center">
+                                        <div className="w-8 h-8 bg-[#4a4a4a] rounded-full flex items-center justify-center">
                                             <Bot
                                                 size={16}
-                                                className="text-white"
+                                                className="text-[#e5e5e5]"
                                             />
                                         </div>
                                         <div className="flex items-center">
