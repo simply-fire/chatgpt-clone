@@ -474,7 +474,7 @@ export default function ChatWindow({
                         {messages.map((message, index) => (
                             <div
                                 key={message.id}
-                                className="relative animate-slide-in border-b border-[#3a3a3a] last:border-b-0"
+                                className="relative animate-slide-in"
                                 style={{ animationDelay: `${index * 0.1}s` }}
                             >
                                 <div className="max-w-4xl mx-auto px-6 py-6">
@@ -714,6 +714,13 @@ export default function ChatWindow({
                                         </div>
                                     )}
                                 </div>
+
+                                {/* Centered shorter separator line - only between messages */}
+                                {index < messages.length - 1 && (
+                                    <div className="flex justify-center py-4">
+                                        <div className="w-32 h-px bg-[#3a3a3a]"></div>
+                                    </div>
+                                )}
                             </div>
                         ))}
 
