@@ -777,69 +777,110 @@ export default function ChatWindow({
                         onRemove={removeFile}
                     />
 
-                    <div className="p-6">
-                        <form onSubmit={handleSubmit} className="relative">
-                            <div className="relative flex items-center bg-[#2a2a2a] rounded-2xl border border-[#525252] shadow-lg hover:shadow-xl transition-all duration-200 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500">
-                                {/* File upload button */}
-                                {useNextCloudinary ? (
-                                    <div className="pl-4">
-                                        <NextCloudinaryUpload
-                                            onFileSelect={handleFileSelect}
-                                            isProcessing={isProcessing}
-                                            canUpload={true}
-                                            capabilities={capabilities}
-                                            onUploadSuccess={(result) => {
-                                                console.log(
-                                                    "🎉 Next Cloudinary upload completed:",
-                                                    result
-                                                );
-                                            }}
+                    <div className="p-6 flex justify-center">
+                        <div className="w-full max-w-4xl">
+                            <form onSubmit={handleSubmit} className="space-y-3">
+                                {/* Unified input container - wraps both lines with increased curvature */}
+                                <div className="bg-[#2a2a2a] border border-[#525252] rounded-3xl p-5 space-y-4 focus-within:ring-2 focus-within:ring-blue-500/50 focus-within:border-blue-500 transition-all duration-200">
+                                    {/* First line - Text input */}
+                                    <div className="relative">
+                                        <input
+                                            value={input}
+                                            onChange={handleInputChange}
+                                            type="text"
+                                            className="w-full px-0 py-2 bg-transparent text-[#f5f5f5] placeholder-[#a0a0a0] border-0 focus:outline-none focus:ring-0"
+                                            placeholder="Ask anything..."
+                                            disabled={isLoading}
                                         />
                                     </div>
-                                ) : (
-                                    <div className="pl-4">
-                                        <FileUploadButton
-                                            onFileSelect={handleFileSelect}
-                                            isProcessing={isProcessing}
-                                            canUpload={true}
-                                            capabilities={capabilities}
-                                        />
+
+                                    {/* Second line - Tools and send button */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            {/* File upload button */}
+                                            {useNextCloudinary ? (
+                                                <NextCloudinaryUpload
+                                                    onFileSelect={
+                                                        handleFileSelect
+                                                    }
+                                                    isProcessing={isProcessing}
+                                                    canUpload={true}
+                                                    capabilities={capabilities}
+                                                    onUploadSuccess={(
+                                                        result
+                                                    ) => {
+                                                        console.log(
+                                                            "🎉 Next Cloudinary upload completed:",
+                                                            result
+                                                        );
+                                                    }}
+                                                />
+                                            ) : (
+                                                <FileUploadButton
+                                                    onFileSelect={
+                                                        handleFileSelect
+                                                    }
+                                                    isProcessing={isProcessing}
+                                                    canUpload={true}
+                                                    capabilities={capabilities}
+                                                />
+                                            )}
+
+                                            {/* Tools button placeholder for future features */}
+                                            <button
+                                                type="button"
+                                                className="p-2 rounded-lg text-[#a0a0a0] hover:text-[#e5e5e5] hover:bg-[#3a3a3a] transition-all duration-200"
+                                                title="Tools"
+                                            >
+                                                <svg
+                                                    width="16"
+                                                    height="16"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    strokeWidth="2"
+                                                >
+                                                    <path d="M12 20h9" />
+                                                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                                                </svg>
+                                            </button>
+                                        </div>
+
+                                        {/* Send button */}
+                                        <button
+                                            type="submit"
+                                            disabled={
+                                                isLoading ||
+                                                (!input.trim() && !hasFiles) ||
+                                                isProcessing
+                                            }
+                                            className="p-2 rounded-lg bg-[#f5f5f5] text-[#212121] hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 disabled:hover:bg-[#f5f5f5]"
+                                            title="Send message"
+                                        >
+                                            {isLoading ? (
+                                                <div className="w-4 h-4 border-2 border-[#212121]/30 border-t-[#212121] rounded-full animate-spin"></div>
+                                            ) : (
+                                                <svg
+                                                    width="16"
+                                                    height="16"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    strokeWidth="2"
+                                                >
+                                                    <path d="m22 2-7 20-4-9-9-4Z" />
+                                                    <path d="M22 2 11 13" />
+                                                </svg>
+                                            )}
+                                        </button>
                                     </div>
-                                )}
+                                </div>
+                            </form>
 
-                                <input
-                                    value={input}
-                                    onChange={handleInputChange}
-                                    type="text"
-                                    className="flex-1 px-4 py-4 bg-transparent focus:outline-none resize-none text-[#f5f5f5] placeholder-[#a0a0a0]"
-                                    placeholder={
-                                        hasFiles
-                                            ? "Add a message (optional)..."
-                                            : "Message ChatGPT..."
-                                    }
-                                    disabled={isLoading}
-                                />
-
-                                <button
-                                    type="submit"
-                                    disabled={
-                                        isLoading ||
-                                        (!input.trim() && !hasFiles) ||
-                                        isProcessing
-                                    }
-                                    className="mr-3 p-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-white shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none"
-                                >
-                                    {isLoading ? (
-                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                    ) : (
-                                        <Send size={20} />
-                                    )}
-                                </button>
-                            </div>
-                        </form>
-                        <p className="text-xs text-[#a0a0a0] mt-2 text-center">
-                            ChatGPT can make mistakes. Check important info.
-                        </p>
+                            <p className="text-xs text-[#a0a0a0] mt-3 text-center">
+                                ChatGPT can make mistakes. Check important info.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
