@@ -104,22 +104,13 @@ export default function FileUpload({
                             Drop files here
                         </div>
                     )
-                ) : (
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                ) : (                    <div className="text-sm text-gray-600 dark:text-gray-400">
                         <span className="font-medium">Click to upload</span> or
                         drag and drop
                         <div className="text-xs mt-1">
-                            {capabilities.supportsImages &&
-                                "Images: " +
-                                    capabilities.supportedImageTypes.join(", ")}
-                            {capabilities.supportsImages &&
-                                capabilities.supportsDocuments &&
-                                " • "}
-                            {capabilities.supportsDocuments &&
-                                "Docs: " +
-                                    capabilities.supportedDocumentTypes.join(
-                                        ", "
-                                    )}
+                            {capabilities.supportsImages && "Images: JPG, PNG, GIF, WebP"}
+                            {capabilities.supportsImages && capabilities.supportsDocuments && " • "}
+                            {capabilities.supportsDocuments && "Documents: PDF, Word, Excel, PowerPoint, CSV, RTF, and more"}
                         </div>
                         <div className="text-xs text-gray-500">
                             Max{" "}

@@ -153,6 +153,7 @@ export default function ChatWindow({
                 (msg) => msg.role === "user"
             );
             if (lastUserMessageIndex === -1) {
+                console.log("❌ No user message found for regeneration");
                 isRegeneratingRef.current = false;
                 return;
             }
@@ -160,25 +161,39 @@ export default function ChatWindow({
             // Get the last user message
             const lastUserMessage = messages[lastUserMessageIndex];
             if (!lastUserMessage?.content) {
+                console.log("❌ Last user message has no content");
                 isRegeneratingRef.current = false;
                 return;
             }
 
+            console.log("🔄 Regenerating from user message:", {
+                index: lastUserMessageIndex,
+                content: lastUserMessage.content.substring(0, 100) + "...",
+                hasAttachments: !!lastUserMessage.experimental_attachments
+            });
+
             // Remove all messages after the last user message (including any assistant responses)
-            const messagesToKeep = messages.slice(0, lastUserMessageIndex + 1);
-            console.log("✂️ Keeping", messagesToKeep.length, "messages, regenerating from:", lastUserMessage.content.substring(0, 50) + "...");
+            const messagesToKeep = messages.slice(0, lastUserMessageIndex);
+            console.log("✂️ Keeping", messagesToKeep.length, "messages before regeneration");
             
-            // Update messages state to remove assistant responses
+            // Update messages state to remove the last user message and all responses
             setMessages(messagesToKeep);
             
             // Small delay to ensure state is updated, then use append to regenerate
             setTimeout(async () => {
                 try {
-                    // Use append to trigger regeneration - append will add the user message and generate response
-                    // But since the user message is already in the messages, we use reload instead
-                    await reload();
+                    console.log("🚀 Appending user message for regeneration:", lastUserMessage.content.substring(0, 50) + "...");
+                    
+                    // Use append to re-add the user message and trigger new response generation
+                    await append({
+                        role: 'user',
+                        content: lastUserMessage.content,
+                        ...(lastUserMessage.experimental_attachments && {
+                            experimental_attachments: lastUserMessage.experimental_attachments
+                        })
+                    });
                 } catch (error) {
-                    console.error("❌ Error during regeneration:", error);
+                    console.error("❌ Error during regeneration append:", error);
                 } finally {
                     setTimeout(() => {
                         isRegeneratingRef.current = false;
@@ -190,7 +205,7 @@ export default function ChatWindow({
             console.error("❌ Error during regeneration setup:", error);
             isRegeneratingRef.current = false;
         }
-    }, [messages, setMessages, isLoading, reload]);const handleEditStart = (messageId: string, content: string) => {
+    }, [messages, setMessages, isLoading, append]);const handleEditStart = (messageId: string, content: string) => {
         isEditingRef.current = true;
         setEditingMessageId(messageId);
         setEditContent(content);
@@ -214,28 +229,34 @@ export default function ChatWindow({
         const editedMessage = {
             ...messages[messageIndex],
             content: editContent.trim(),
-        };
-
-        // If this was a user message, regenerate the response using the proper approach
+        };        // If this was a user message, regenerate the response using the proper approach
         if (editedMessage.role === "user") {
             console.log("🔄 Auto-regenerating after user message edit");
             isRegeneratingRef.current = true;
             
             try {
-                // Create new messages array with edited content and remove subsequent messages
-                const updatedMessages = messages.slice(0, messageIndex);
-                updatedMessages.push(editedMessage);
+                // Remove all messages from the edit point onward
+                const messagesToKeep = messages.slice(0, messageIndex);
+                console.log("✂️ Keeping", messagesToKeep.length, "messages before edit regeneration");
                 
-                // Set messages to include the edited user message, removing any assistant responses
-                setMessages(updatedMessages);
+                // Set messages to the trimmed array (without the edited message yet)
+                setMessages(messagesToKeep);
                 
-                // Small delay to ensure state is updated, then regenerate
+                // Small delay to ensure state is updated, then use append to add edited message
                 setTimeout(async () => {
                     try {
-                        // Use reload to regenerate from the current state
-                        await reload();
+                        console.log("🚀 Appending edited user message:", editedMessage.content.substring(0, 50) + "...");
+                        
+                        // Use append to add the edited user message and trigger new response generation
+                        await append({
+                            role: 'user',
+                            content: editedMessage.content,
+                            ...(editedMessage.experimental_attachments && {
+                                experimental_attachments: editedMessage.experimental_attachments
+                            })
+                        });
                     } catch (error) {
-                        console.error("❌ Error during auto-regeneration after edit:", error);
+                        console.error("❌ Error during edit regeneration append:", error);
                     } finally {
                         setTimeout(() => {
                             isRegeneratingRef.current = false;
@@ -243,10 +264,10 @@ export default function ChatWindow({
                     }
                 }, 100);
             } catch (error) {
-                console.error("❌ Error setting up auto-regeneration:", error);
+                console.error("❌ Error setting up edit regeneration:", error);
                 isRegeneratingRef.current = false;
             }
-        } else {
+        }else {
             // For assistant messages, just update the messages array
             const updatedMessages = messages.slice(0, messageIndex);
             updatedMessages.push(editedMessage);

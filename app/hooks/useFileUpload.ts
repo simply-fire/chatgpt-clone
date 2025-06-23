@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { MessageAttachment } from "../utils/messageTypes";
+import { MessageAttachment, getFileType } from "../utils/messageTypes";
 import {
     getCurrentModelCapabilities,
     getFileValidationError,
@@ -30,18 +30,12 @@ export const useFileUpload = (currentModel: string = "gpt-3.5-turbo") => {
                     `${file.name}: ${validationError}`,
                 ]);
                 return null;
-            }
-
-            const attachment: MessageAttachment = {
+            }            const attachment: MessageAttachment = {
                 id: crypto.randomUUID(),
                 name: file.name,
-                type: file.type.startsWith("image/")
-                    ? "image"
-                    : file.type === "application/pdf"
-                    ? "pdf"
-                    : "document",
+                type: getFileType(file), // Use improved file type detection
                 size: file.size,
-                mimeType: file.type,
+                mimeType: file.type || 'application/octet-stream', // Fallback for missing MIME type
                 file: file, // Store original File object for AI SDK
                 previewUrl: URL.createObjectURL(file),
             };

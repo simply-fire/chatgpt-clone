@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { X, Image, FileText, File } from "lucide-react";
+import { X, Image, FileText, File, FileSpreadsheet, Presentation, Code } from "lucide-react";
 import { MessageAttachment, formatFileSize } from "../utils/messageTypes";
 
 interface FilePreviewProps {
@@ -16,14 +16,29 @@ export default function FilePreview({
     onRemove,
     showRemove = true,
     size = "medium",
-}: FilePreviewProps) {
-    const getFileIcon = () => {
+}: FilePreviewProps) {    const getFileIcon = () => {
+        const mimeType = attachment.mimeType.toLowerCase();
+        const extension = attachment.name.toLowerCase().split('.').pop() || '';
+        
         switch (attachment.type) {
             case "image":
                 return <Image size={16} className="text-blue-500" />;
             case "pdf":
                 return <FileText size={16} className="text-red-500" />;
             default:
+                // More specific icons for different document types
+                if (mimeType.includes('spreadsheet') || ['xls', 'xlsx', 'xlsm', 'ods', 'csv'].includes(extension)) {
+                    return <FileSpreadsheet size={16} className="text-green-500" />;
+                }
+                if (mimeType.includes('presentation') || ['ppt', 'pptx', 'pptm', 'odp'].includes(extension)) {
+                    return <Presentation size={16} className="text-orange-500" />;
+                }
+                if (mimeType.includes('word') || ['doc', 'docx', 'docm', 'odt', 'rtf'].includes(extension)) {
+                    return <FileText size={16} className="text-blue-600" />;
+                }
+                if (['json', 'xml', 'html', 'htm', 'md'].includes(extension)) {
+                    return <Code size={16} className="text-purple-500" />;
+                }
                 return <File size={16} className="text-gray-500" />;
         }
     };

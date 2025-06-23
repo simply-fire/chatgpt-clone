@@ -26,6 +26,58 @@ export interface ChatMessage extends Message {
     attachments?: MessageAttachment[];
 }
 
+// Utility to detect file type from MIME type and extension
+export const getFileType = (file: File): "image" | "document" | "pdf" => {
+    const mimeType = file.type.toLowerCase();
+    const extension = file.name.toLowerCase().split('.').pop() || '';
+    
+    // PDF files
+    if (mimeType === 'application/pdf' || extension === 'pdf') {
+        return 'pdf';
+    }
+    
+    // Image files
+    if (mimeType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(extension)) {
+        return 'image';
+    }
+    
+    // Document files - comprehensive list
+    const documentMimeTypes = [
+        // Text formats
+        'text/plain', 'text/markdown', 'text/csv', 'text/rtf', 'application/rtf',
+        'text/html', 'text/xml', 'application/xml', 'application/json',
+        
+        // Microsoft Office formats
+        'application/msword', // .doc
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+        'application/vnd.ms-excel', // .xls
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+        'application/vnd.ms-powerpoint', // .ppt
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
+        'application/vnd.ms-excel.sheet.macroEnabled.12', // .xlsm
+        'application/vnd.ms-powerpoint.presentation.macroEnabled.12', // .pptm
+        'application/vnd.ms-word.document.macroEnabled.12', // .docm
+        
+        // OpenDocument formats
+        'application/vnd.oasis.opendocument.text', // .odt
+        'application/vnd.oasis.opendocument.spreadsheet', // .ods
+        'application/vnd.oasis.opendocument.presentation', // .odp
+    ];
+    
+    const documentExtensions = [
+        'txt', 'md', 'csv', 'rtf', 'html', 'htm', 'xml', 'json',
+        'doc', 'docx', 'docm', 'xls', 'xlsx', 'xlsm', 'ppt', 'pptx', 'pptm',
+        'odt', 'ods', 'odp'
+    ];
+    
+    if (documentMimeTypes.includes(mimeType) || documentExtensions.includes(extension)) {
+        return 'document';
+    }
+    
+    // Default to document for any unrecognized file (fallback)
+    return 'document';
+};
+
 // Utility to convert File to base64
 export const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
