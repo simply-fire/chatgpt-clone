@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: chatgpt-clone
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: OPENAI_API_KEY
+        sync: false  # Will be set manually in dashboard for security
+      - key: NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+        sync: false  # Will be set manually in dashboard
+      - key: NEXT_PUBLIC_CLOUDINARY_API_KEY
+        sync: false  # Will be set manually in dashboard
+      - key: CLOUDINARY_API_SECRET
+        sync: false  # Will be set manually in dashboard
+      - key: MEM0_API_KEY
+        sync: false  # Will be set manually in dashboard
