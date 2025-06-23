@@ -15,7 +15,7 @@ import {
     Clock,
     Sparkles,
 } from "lucide-react";
-import { useConversations } from "./contexts/ConversationContext";
+import { useConversations } from "../../app/contexts/ConversationContext";
 import { useState } from "react";
 
 interface SidebarProps {

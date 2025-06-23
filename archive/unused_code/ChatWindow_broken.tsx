@@ -6,16 +6,16 @@ import { Menu, Send, User, Bot, Edit, Check, X, ThumbsUp, ThumbsDown, RotateCcw 
 import { useChat } from "@ai-sdk/react";
 import ReactMarkdown from "react-markdown";
 import { useEffect, useRef, useState, useCallback, FormEvent } from "react";
-import TokenMeter from "./components/TokenMeter";
-import { useConversations } from "./contexts/ConversationContext";
-import { useFileUpload } from "./hooks/useFileUpload";
-import { useMemory } from "./hooks/useMemory"; // NEW: Memory integration
-import { getUserId } from "./utils/mem0Client"; // NEW: For stable user ID
-import { FileUploadButton } from "./components/FileUpload";
-import NextCloudinaryUpload from "./components/NextCloudinaryUpload";
-import { FilePreviewStrip } from "./components/FilePreview";
-import AttachmentBubble from "./components/AttachmentBubble";
-import { ChatMessage } from "./utils/messageTypes";
+import TokenMeter from "../../app/components/TokenMeter";
+import { useConversations } from "../../app/contexts/ConversationContext";
+import { useFileUpload } from "../../app/hooks/useFileUpload";
+import { useMemory } from "../../app/hooks/useMemory"; // NEW: Memory integration
+import { getUserId } from "../../app/utils/mem0Client"; // NEW: For stable user ID
+import { FileUploadButton } from "../../app/components/FileUpload";
+import NextCloudinaryUpload from "../../app/components/NextCloudinaryUpload";
+import { FilePreviewStrip } from "../../app/components/FilePreview";
+import AttachmentBubble from "../../app/components/AttachmentBubble";
+import { ChatMessage } from "../../app/utils/messageTypes";
 
 interface ChatWindowProps {
     isSidebarOpen: boolean;
