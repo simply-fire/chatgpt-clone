@@ -44,10 +44,16 @@ export default function ChatWindow({
         currentConversation,
         updateCurrentConversation,
         createConversation,
-    } = useConversations();
-    const isUpdatingRef = useRef(false);
+    } = useConversations();    const isUpdatingRef = useRef(false);
     const conversationInitialized = useRef<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    
+    // Track message saving and operations to avoid infinite loops
+    const lastSavedMessageCount = useRef(0);
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const isSavingRef = useRef(false);
+    const isRegeneratingRef = useRef(false);
+    const isEditingRef = useRef(false);
 
     console.log("🔍 [ChatWindow] Current conversation:", {
         id: currentConversation?.id,
@@ -73,9 +79,7 @@ export default function ChatWindow({
         clearErrors,
         capabilities,
         hasFiles,
-    } = useFileUpload(currentModel);
-
-    // Enhanced useChat integration with memory
+    } = useFileUpload(currentModel);    // Enhanced useChat integration with memory
     const {
         messages,
         input,
@@ -83,6 +87,8 @@ export default function ChatWindow({
         handleSubmit: originalHandleSubmit,
         isLoading,
         setMessages,
+        append,
+        reload,
         status,
     } = useChat({
         api: "/api/chat",
@@ -134,79 +140,119 @@ export default function ChatWindow({
 
         // You could extend this to send feedback to an analytics service
         console.log(`Feedback for message ${messageId}:`, feedback);
-    };
-
-    // Handle regenerate response
-    const handleRegenerateResponse = useCallback(() => {
+    };    // Handle regenerate response - using append method for reliability
+    const handleRegenerateResponse = useCallback(async () => {
+        if (isLoading || isRegeneratingRef.current) return;
+        
         console.log("🔄 Regenerating response...");
+        isRegeneratingRef.current = true;
 
-        // Find the last user message to regenerate from
-        const lastUserMessageIndex = messages.findLastIndex(
-            (msg) => msg.role === "user"
-        );
-        if (lastUserMessageIndex === -1) return;
+        try {
+            // Find the last user message to regenerate from
+            const lastUserMessageIndex = messages.findLastIndex(
+                (msg) => msg.role === "user"
+            );
+            if (lastUserMessageIndex === -1) {
+                isRegeneratingRef.current = false;
+                return;
+            }
 
-        // Remove all assistant messages after the last user message
-        const messagesToKeep = messages.slice(0, lastUserMessageIndex + 1);
-        console.log("✂️ Keeping", messagesToKeep.length, "messages");
-        setMessages(messagesToKeep);
+            // Get the last user message
+            const lastUserMessage = messages[lastUserMessageIndex];
+            if (!lastUserMessage?.content) {
+                isRegeneratingRef.current = false;
+                return;
+            }
 
-        // Re-submit the last user message
-        const lastUserMessage = messages[lastUserMessageIndex];
-        if (lastUserMessage && lastUserMessage.content) {
-            setTimeout(() => {
-                console.log(
-                    "🚀 Re-submitting:",
-                    lastUserMessage.content.substring(0, 50) + "..."
-                );
-                // Use a simple synthetic event
-                const event = { preventDefault: () => {} } as FormEvent;
-
-                // Temporarily set input to trigger submission
-                handleInputChange({
-                    target: { value: lastUserMessage.content },
-                } as any);
-
-                // Submit after input is set
-                setTimeout(() => {
-                    originalHandleSubmit(event);
-                    // Clear input after submission
+            // Remove all messages after the last user message (including any assistant responses)
+            const messagesToKeep = messages.slice(0, lastUserMessageIndex + 1);
+            console.log("✂️ Keeping", messagesToKeep.length, "messages, regenerating from:", lastUserMessage.content.substring(0, 50) + "...");
+            
+            // Update messages state to remove assistant responses
+            setMessages(messagesToKeep);
+            
+            // Small delay to ensure state is updated, then use append to regenerate
+            setTimeout(async () => {
+                try {
+                    // Use append to trigger regeneration - append will add the user message and generate response
+                    // But since the user message is already in the messages, we use reload instead
+                    await reload();
+                } catch (error) {
+                    console.error("❌ Error during regeneration:", error);
+                } finally {
                     setTimeout(() => {
-                        handleInputChange({ target: { value: "" } } as any);
-                    }, 100);
-                }, 50);
+                        isRegeneratingRef.current = false;
+                    }, 500);
+                }
             }, 100);
+            
+        } catch (error) {
+            console.error("❌ Error during regeneration setup:", error);
+            isRegeneratingRef.current = false;
         }
-    }, [messages, setMessages, originalHandleSubmit, handleInputChange]);
-
-    const handleEditStart = (messageId: string, content: string) => {
+    }, [messages, setMessages, isLoading, reload]);const handleEditStart = (messageId: string, content: string) => {
+        isEditingRef.current = true;
         setEditingMessageId(messageId);
         setEditContent(content);
     };
 
     const handleEditCancel = () => {
+        isEditingRef.current = false;
         setEditingMessageId(null);
         setEditContent("");
-    };
-
-    const handleEditSave = async (messageId: string) => {
+    };    const handleEditSave = useCallback(async (messageId: string) => {
         if (!editContent.trim()) return;
 
         const messageIndex = messages.findIndex((msg) => msg.id === messageId);
         if (messageIndex === -1) return;
 
-        // Create new messages array with updated content and remove subsequent messages
-        const updatedMessages = messages.slice(0, messageIndex);
-        updatedMessages.push({
-            ...messages[messageIndex],
-            content: editContent.trim(),
-        });
-
-        // Update messages and clear edit state
-        setMessages(updatedMessages);
+        // Clear edit state first
         setEditingMessageId(null);
         setEditContent("");
-    };
+        isEditingRef.current = false;
+
+        const editedMessage = {
+            ...messages[messageIndex],
+            content: editContent.trim(),
+        };
+
+        // If this was a user message, regenerate the response using the proper approach
+        if (editedMessage.role === "user") {
+            console.log("🔄 Auto-regenerating after user message edit");
+            isRegeneratingRef.current = true;
+            
+            try {
+                // Create new messages array with edited content and remove subsequent messages
+                const updatedMessages = messages.slice(0, messageIndex);
+                updatedMessages.push(editedMessage);
+                
+                // Set messages to include the edited user message, removing any assistant responses
+                setMessages(updatedMessages);
+                
+                // Small delay to ensure state is updated, then regenerate
+                setTimeout(async () => {
+                    try {
+                        // Use reload to regenerate from the current state
+                        await reload();
+                    } catch (error) {
+                        console.error("❌ Error during auto-regeneration after edit:", error);
+                    } finally {
+                        setTimeout(() => {
+                            isRegeneratingRef.current = false;
+                        }, 500);
+                    }
+                }, 100);
+            } catch (error) {
+                console.error("❌ Error setting up auto-regeneration:", error);
+                isRegeneratingRef.current = false;
+            }
+        } else {
+            // For assistant messages, just update the messages array
+            const updatedMessages = messages.slice(0, messageIndex);
+            updatedMessages.push(editedMessage);
+            setMessages(updatedMessages);
+        }
+    }, [editContent, messages, setMessages, reload]);
 
     // Enhanced submit handler that includes file attachments
     const handleSubmit = useCallback(
@@ -282,9 +328,7 @@ export default function ChatWindow({
 
     useEffect(() => {
         scrollToBottom();
-    }, [messages]);
-
-    // Initialize messages from current conversation on mount or conversation change
+    }, [messages]);    // Initialize messages from current conversation on mount or conversation change
     useEffect(() => {
         if (
             currentConversation &&
@@ -292,22 +336,21 @@ export default function ChatWindow({
         ) {
             console.log("🔄 Loading conversation:", currentConversation.id);
             isUpdatingRef.current = true;
+            
+            // Prevent saving during this update
+            isSavingRef.current = true;
+            
             setMessages(currentConversation.messages);
             conversationInitialized.current = currentConversation.id;
             // Reset the completed message count when loading a new conversation
             lastSavedMessageCount.current = currentConversation.messages.length;
+            
             setTimeout(() => {
                 isUpdatingRef.current = false;
+                isSavingRef.current = false; // Re-enable saving after update is complete
             }, 100);
         }
-    }, [currentConversation?.id, setMessages]);
-
-    // Track message saving with refs to avoid infinite loops
-    const lastSavedMessageCount = useRef(0);
-    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const isSavingRef = useRef(false);
-
-    // Save messages when they change (but not during loading/streaming)
+    }, [currentConversation?.id, setMessages]);// Save messages when they change (but not during loading/streaming/regenerating)
     useEffect(() => {
         // Clear any existing timeout
         if (saveTimeoutRef.current) {
@@ -321,14 +364,20 @@ export default function ChatWindow({
         // - No messages
         // - Currently loading/streaming
         // - Already saving
+        // - Currently regenerating
+        // - Currently editing
         // - Message count hasn't changed
+        // - Messages are still being updated
         if (
             !currentConversation ||
             conversationInitialized.current !== currentConversation.id ||
             messages.length === 0 ||
             isLoading ||
             isSavingRef.current ||
-            messages.length === lastSavedMessageCount.current
+            isRegeneratingRef.current ||
+            isEditingRef.current ||
+            messages.length === lastSavedMessageCount.current ||
+            isUpdatingRef.current
         ) {
             return;
         }
@@ -337,10 +386,12 @@ export default function ChatWindow({
             messageCount: messages.length,
             lastSaved: lastSavedMessageCount.current,
             isLoading,
+            isRegenerating: isRegeneratingRef.current,
+            isEditing: isEditingRef.current,
             conversationId: currentConversation.id,
         });
 
-        // Use a timeout to batch rapid message changes and ensure streaming is complete
+        // Use a longer timeout to avoid rapid updates during regeneration
         saveTimeoutRef.current = setTimeout(() => {
             // Double-check conditions before saving
             if (
@@ -348,7 +399,10 @@ export default function ChatWindow({
                 conversationInitialized.current === currentConversation.id &&
                 !isLoading &&
                 !isSavingRef.current &&
-                messages.length > lastSavedMessageCount.current
+                !isRegeneratingRef.current &&
+                !isEditingRef.current &&
+                !isUpdatingRef.current &&
+                messages.length > 0 // Changed from > lastSavedMessageCount.current to allow saving even if count is same
             ) {
                 console.log("💾 [ChatWindow] Saving messages to conversation");
                 isSavingRef.current = true;
@@ -369,7 +423,7 @@ export default function ChatWindow({
                 }
             }
             saveTimeoutRef.current = null;
-        }, 1000); // 1 second delay to ensure streaming is complete
+        }, 2000); // Increased delay to 2 seconds to reduce rapid saves
 
         // Cleanup function
         return () => {
@@ -379,7 +433,7 @@ export default function ChatWindow({
             }
         };
     }, [
-        messages.length,
+        messages,
         isLoading,
         currentConversation?.id,
         updateCurrentConversation,
@@ -864,8 +918,7 @@ export default function ChatWindow({
                                                         >
                                                             <ThumbsDown
                                                                 size={16}
-                                                                className="text-[#a0a0a0] hover:text-[#e5e5e5]"
-                                                            />
+                                                                className="text-[#a0a0a0] hover:text-[#e5e5e5]"                                                            />
                                                         </button>
                                                         <button
                                                             onClick={
@@ -873,12 +926,12 @@ export default function ChatWindow({
                                                             }
                                                             className="p-2 rounded-lg hover:bg-[#3a3a3a] transition-all duration-200"
                                                             title="Regenerate response"
-                                                            disabled={isLoading}
+                                                            disabled={isLoading || isRegeneratingRef.current}
                                                         >
                                                             <RotateCcw
                                                                 size={16}
                                                                 className={`${
-                                                                    isLoading
+                                                                    isLoading || isRegeneratingRef.current
                                                                         ? "animate-spin text-blue-400"
                                                                         : "text-[#a0a0a0] hover:text-[#e5e5e5]"
                                                                 }`}
